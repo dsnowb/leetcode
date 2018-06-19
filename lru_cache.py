@@ -20,6 +20,8 @@ class DLL:
         """
         Move node to head, otherwise maintaining order.
         """
+        if self.head == node:
+            return
         if node._prev:
             node._prev._next = node._next
             if self.tail == node:
