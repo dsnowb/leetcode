@@ -364,3 +364,12 @@ def test_lfu_lru_tie_breaker(small_lfu):
     assert len(small_lfu.lfu) == 3
     assert len(small_lfu.lfu.head._next.val[1]) == 1
     assert small_lfu.lfu.head._next.val[1].head.val == 1
+
+
+def test_lfu_key_in_lfu(small_lfu):
+    """
+    Test updating an existing key, value pair
+    """
+    small_lfu.put(1, 'a')
+
+    assert small_lfu.get(1) == 'a'

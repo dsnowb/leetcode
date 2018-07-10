@@ -153,6 +153,9 @@ class LFUCache:
         :type value: int
         :rtype: void
         """
+        if self.capacity == 0:
+            return
+
         # If at capacity, evict.
         if self.size == self.capacity:
             self.evict()
@@ -188,11 +191,11 @@ class LFUCache:
 
         else:
             item = self.items[key]
+            item['value'] = value
             self.update(item)
 
         # Increment size
         self.size += 1
-
 
     def evict(self):
 
