@@ -84,11 +84,18 @@ class LFUCache:
         self.items = {}
         self.lfu = DLL()
 
+    def __len__(self):
+        """
+        Return size
+        """
+        return self.size
+
     def get(self, key):
         """
         :type key: int
         :rtype: int
         """
+        # Attempt to return value at key
         try:
             item = self.items[key]
             self.update(item)
@@ -97,8 +104,48 @@ class LFUCache:
         except KeyError:
             return -1
 
-    def update(self, node):
-        pass
+    def update(self, item):
+        """
+        Moves item forward in LFU DLL, to head (MRU) of new LRU DLL.
+        """
+        # Remove LRU node from current LFU node
+        item['lfu'].val[1].remove(item['lru'])
+
+        # If next LFU does not exist or is not +1 freq, create a new node
+        # with +1 freq and insert as next LFU node.
+        if (not item['lfu']._next or
+                item['lfu']._next.val[0] != item['lfu'].val[0] + 1):
+
+                    # Create new node
+                    newLFU = Node((item['lfu'].val[0] + 1, DLL()))
+
+                    # Update tail if necessary
+                    if not item['lfu']._next:
+                        self.lfu.tail = newLFU
+
+                    # Update next
+                    newLFU._next = item['lfu']._next
+                    try:
+                        item['lfu']._next._prev = newLFU
+                    except AttributeError:
+                        pass
+
+                    # Update previous
+                    newLFU._prev = item['lfu']
+                    item['lfu']._next = newLFU
+
+                    self.lfu.length += 1
+
+        # Remove LFU node if contains no LRU nodes
+        if len(item['lfu'].val[1]) == 0:
+            self.lfu.remove(item['lfu'])
+
+        # Update LFU to next
+        item['lfu'] = item['lfu']._next
+
+        # Insert LRU node into new LRU DLL
+        item['lfu'].val[1].insert(item['lru'].val)
+        item['lru'] = item['lfu'].val[1].head
 
     def put(self, key, value):
         """
@@ -106,53 +153,62 @@ class LFUCache:
         :type value: int
         :rtype: void
         """
-
-        # Insert a new key-value pair.
-        if key not in self.items:
-            try:
-                self.lfu.head.val.insert(key)
-            except AttributeError:
-                self.lfu.head = Node(DLL())
-                self.lfu.head.val.insert(key)
-
-            self.items[key] = {
-                'value': value,
-                'lfu': self.lfu.head,
-                'lru': self.lfu.head.val.head,
-            }
-
-            if self.size < self.capacity:
-                self.size += 1
-
-        # Update an existing key-value pair
-        else:
-            item = self.items[key]
-
-            # Remove LRU node from current LFU node
-            item['lfu'].val.remove(item['lru'])
-
-            # Attempt to update LFU node
-            try:
-                item['lfu'] = item['lfu']._next
-
-            # If at front of LFU, create new LFU node
-            except AttributeError:
-                self.items[key]['lfu']._next = \
-                                self.items[key]['lfu'].append(DLL())
-
-                # Update LFU node after node creation
-                item['lfu'] = item['lfu']._next
-
-            # Insert new LRU node at new LFU node
-            item['lfu'].val.insert(Node(item['lru'].val))
-
-            # Update LRU node after insertion
-            item['lru'] = item['lfu'].val.head
-
+        # If at capacity, evict.
         if self.size == self.capacity:
             self.evict()
 
+        # Insert a new key-value pair.
+
+        # In addition to key/value, stored values include:
+        # LFU/LRU nodes so that when accessed, LFU/LRU can be updated O(1)
+        # The LRU DLL for a a given frequency is paired with an actual usage
+        # frequency because usage frequencies may be non-sequential
+
+        if key not in self.items:
+
+            # Insert into LFU node with frequency 1, at most recently used
+            # position (head) of corresponding LRU DLL
+            if not self.lfu.head or self.lfu.head.val[0] != 1:
+                self.lfu.insert((1, DLL()))
+            self.lfu.head.val[1].insert(key)
+
+            # Create entry for key/value lookup and LRU/LFU node access
+            self.items[key] = {
+                'value': value,
+                'lfu': self.lfu.head,
+                'lru': self.lfu.head.val[1].head,
+            }
+
+        # Update an existing key-value pair
+
+        # In addition to updating the value at key, updates include:
+        # LFU - Move to +1 frequency LFU. Create that LFU node if necessary.
+        # LRU - Remove from current LRU DLL, insert at most recent position
+        # for new frequency.
+
+        else:
+            item = self.items[key]
+            self.update(item)
+
+        # Increment size
+        self.size += 1
+
+
     def evict(self):
-        node = self.lfu.head.val.tail
-        self.lfu.head.val.remove(node)
+
+        # From the least frequently used DLL (the head of the LFU DLL)
+        # select the least recently used node (the tail of the LRU DLL)
+        node = self.lfu.head.val[1].tail
+
+        # Remove that node from it's LRU DLL
+        self.lfu.head.val[1].remove(node)
+
+        # If the LRU DLL is now empty, remove its parent LFU node
+        if len(self.lfu.head.val[1]) == 0:
+            self.lfu.remove(self.lfu.head)
+
+        # Remove key/value pair from items
         del self.items[node.val]
+
+        # Decrement size of LFU
+        self.size -= 1
