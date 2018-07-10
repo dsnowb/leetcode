@@ -373,3 +373,14 @@ def test_lfu_key_in_lfu(small_lfu):
     small_lfu.put(1, 'a')
 
     assert small_lfu.get(1) == 'a'
+
+
+def test_lfu_key_in_lfu_integration(small_lfu):
+    """
+    Test integration of key/value pair update
+    """
+    small_lfu.put(0, 'zero')
+    small_lfu.put('a', 'A')
+    assert 0 in small_lfu.items
+    assert 1 not in small_lfu.items
+    assert small_lfu.lfu.head._next.val[1].head.val == 0

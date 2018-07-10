@@ -156,8 +156,8 @@ class LFUCache:
         if self.capacity == 0:
             return
 
-        # If at capacity, evict.
-        if self.size == self.capacity:
+        # If at capacity and attempting to insert new value, evict.
+        if self.size == self.capacity and key not in self.items:
             self.evict()
 
         # Insert a new key-value pair.
@@ -182,6 +182,8 @@ class LFUCache:
                 'lru': self.lfu.head.val[1].head,
             }
 
+            self.size += 1
+
         # Update an existing key-value pair
 
         # In addition to updating the value at key, updates include:
@@ -193,9 +195,6 @@ class LFUCache:
             item = self.items[key]
             item['value'] = value
             self.update(item)
-
-        # Increment size
-        self.size += 1
 
     def evict(self):
 
