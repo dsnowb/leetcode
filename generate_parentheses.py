@@ -1,17 +1,23 @@
-def generateParenthesis(n):
-    """
-    :type n: int
-    :rtype: List[str]
-    """
-    def recurse(m):
-        pset = set()
-        if m:
-            for pstring in recurse(m - 1):
-
-                pset.add('()' + pstring)
-                pset.add(pstring + '()')
-                pset.add(({}).format(pstring))
-
-        return pset
+class Solution:
+    def generateParenthesis(self, n):
+        """
+        :type n: int
+        :rtype: List[str]
+        """
+        combos = set()
         
-    recurse(n)
+        def recurse(c, sub='', opens=0):
+            nonlocal combos
+            if c == 0:
+                combos.add(sub)
+                return
+            
+            if c > opens:
+                recurse(c - 1, sub + '(', opens + 1)
+            
+            if opens:
+                recurse(c - 1, sub + ')', opens - 1)    
+        
+        recurse(n * 2)
+        
+        return list(combos)
