@@ -4,12 +4,12 @@ class Solution:
         :type n: int
         :rtype: List[str]
         """
-        combos = set()
+        combos = []
         
         def recurse(c, sub='', opens=0):
             nonlocal combos
             if c == 0:
-                combos.add(sub)
+                combos.append(sub)
                 return
             
             if c > opens:
@@ -20,4 +20,4 @@ class Solution:
         
         recurse(n * 2)
         
-        return list(combos)
+        return combos
